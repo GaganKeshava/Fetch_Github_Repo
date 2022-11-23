@@ -103,7 +103,7 @@ function App() {
         </header>
         {displayData}
       </section>
-      {error && <div className="error">{error}</div>}
+      <div className="error">{error}</div>
     </div>
   );
 }
