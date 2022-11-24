@@ -4,71 +4,57 @@ import './styles.css';
 function App() {
   const [username, setUsername] = useState('');
   const [repoData, setRepoData] = useState([]);
-  const [modifiedRepoData, setModifiedRepoData] = useState([]);
   const [isfork, setIsFork] = useState(false);
   const [error, setError] = useState('');
 
-  const onClickSubmitHandler = async () => {
+  const onSubmitHandler = async () => {
     setError('');
     try {
       const response = await fetch(
-        'https://api.github.com/users/' + username + '/repos'
+        `https://api.github.com/users/${username}/repos`
       );
       if (response.status !== 200) {
         throw new Error('Not Found');
-      } else {
-        const jsonData = await response.json();
-        let filteredData = await jsonData.map((item) => {
-          return {
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            fork: item.fork,
-            size: item.size,
-            language: item.language,
-          };
-        });
-
-        if (filteredData.length === 0) {
-          setError(`No repo found for ${username}`);
-        }
-
-        filteredData.sort((a, b) => {
-          return b.size - a.size;
-        });
-
-        setRepoData(filteredData);
-
-        if (isfork === false) {
-          filteredData = filteredData.filter((type) => type.fork === false);
-        }
-
-        setModifiedRepoData(filteredData);
       }
+      const jsonData = await response.json();
+      let sortedData = jsonData.sort((a, b) => {
+        return b.size - a.size;
+      });
+      if (sortedData.length === 0) {
+        setError(`No repo found for ${username}`);
+      }
+      setRepoData(sortedData);
     } catch (error) {
       setError(error.message);
+      setRepoData([]);
     }
   };
 
-  const onClickForkHandler = () => {
-    let forkedData;
-    if (!isfork) {
-      forkedData = repoData;
-    } else {
-      forkedData = repoData.filter((type) => type.fork === false);
+  const excludeForkData = (repositoryData) => {
+    const { id, name, language, description, size, fork } = repositoryData;
+    if (!fork) {
+      return (
+        <div key={id}>
+          <div className="col">{name}</div>
+          <div className="col">{language}</div>
+          <div className="col">{description}</div>
+          <div className="col">{size}</div>
+        </div>
+      );
     }
-    setModifiedRepoData(forkedData);
-    setIsFork(!isfork);
   };
 
-  let displayData = modifiedRepoData.map((repo) => (
-    <div key={repo.id}>
-      <div className="col">{repo.name}</div>
-      <div className="col">{repo.language}</div>
-      <div className="col">{repo.description}</div>
-      <div className="col">{repo.size}</div>
-    </div>
-  ));
+  const includeForkData = (repositoryData) => {
+    const { id, name, language, description, size } = repositoryData;
+    return (
+      <div key={id}>
+        <div className="col">{name}</div>
+        <div className="col">{language}</div>
+        <div className="col">{description}</div>
+        <div className="col">{size}</div>
+      </div>
+    );
+  };
 
   return (
     <div className="App">
@@ -85,25 +71,26 @@ function App() {
           id="fork"
           type="checkbox"
           value={isfork}
-          onClick={onClickForkHandler}
+          onChange={(val) => setIsFork(val.target.checked)}
         />
-        <button
-          disabled={!username.trim().length}
-          onClick={onClickSubmitHandler}
-        >
+        <button disabled={!username.trim().length} onClick={onSubmitHandler}>
           Submit
         </button>
       </div>
-      <section>
-        <header>
-          <div className="col">Name</div>
-          <div className="col">Language</div>
-          <div className="col">Description</div>
-          <div className="col">Size</div>
-        </header>
-        {displayData}
-      </section>
-      <div className="error">{error}</div>
+      {repoData.length > 0 && (
+        <section>
+          <header>
+            <div className="col">Name</div>
+            <div className="col">Language</div>
+            <div className="col">Description</div>
+            <div className="col">Size</div>
+          </header>
+          {isfork
+            ? repoData.map(includeForkData)
+            : repoData.map(excludeForkData)}
+        </section>
+      )}
+      {error && <div className="error">{error}</div>}
     </div>
   );
 }
